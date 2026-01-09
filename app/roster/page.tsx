@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import NavBar from '@/components/NavBar';
+import MultiplierBadge, { MultiplierRing } from '@/components/MultiplierBadge';
 import {
   WILD_CARD_MATCHUPS,
   PROJECTED_POINTS,
@@ -310,12 +311,28 @@ export default function RosterPage() {
             </button>
           </div>
         </div>
-        {/* Instructions */}
-        <div className="mb-6 p-4 bg-blue-900/30 border border-blue-700 rounded-xl">
-          <p className="text-blue-200 text-sm">
-            <strong>Pick your 8-player roster!</strong> Click a slot below, then select a player.
-            Keep players across rounds to earn multipliers (up to 4x)! Players with higher multipliers are shown with badges.
-          </p>
+        {/* Multiplier Legend */}
+        <div className="mb-6 p-4 bg-slate-800 border border-slate-700 rounded-xl">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-white font-medium mb-1">Loyalty Multipliers</p>
+              <p className="text-slate-400 text-sm">Keep players across rounds to earn bonus multipliers on their points!</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-sm">
+                <span className="w-6 h-6 rounded-full bg-blue-500/20 border-2 border-blue-500 flex items-center justify-center text-blue-400 text-xs font-bold">2x</span>
+                <span className="text-slate-400">Week 2</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-sm">
+                <span className="w-6 h-6 rounded-full bg-purple-500/20 border-2 border-purple-500 flex items-center justify-center text-purple-400 text-xs font-bold">3x</span>
+                <span className="text-slate-400">Week 3</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-sm">
+                <span className="w-6 h-6 rounded-full bg-amber-500/30 border-2 border-amber-400 flex items-center justify-center text-amber-400 text-xs font-bold animate-pulse">4x</span>
+                <span className="text-slate-400">Week 4 (Max)</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* My Roster Section */}
@@ -357,12 +374,8 @@ export default function RosterPage() {
                     {slot.shortLabel}
                   </div>
 
-                  {/* Multiplier Badge */}
-                  {selectedPlayer && multiplier > 1 && (
-                    <div className="absolute top-2 right-8 px-2 py-0.5 bg-emerald-600 rounded text-xs font-bold text-white">
-                      {multiplier}x
-                    </div>
-                  )}
+                  {/* Multiplier Ring - Enhanced Visual */}
+                  {selectedPlayer && <MultiplierRing multiplier={multiplier} />}
 
                   {/* Clear Button */}
                   {selectedPlayer && (
@@ -412,7 +425,11 @@ export default function RosterPage() {
                       {projected !== null && (
                         <div className="mt-1 text-center">
                           <span className="inline-block px-2 py-0.5 bg-black/30 rounded text-emerald-300 text-xs font-bold">
-                            {(projected * multiplier).toFixed(1)} pts
+                            {multiplier > 1 ? (
+                              <>{projected.toFixed(1)} × {multiplier} = {(projected * multiplier).toFixed(1)}</>
+                            ) : (
+                              <>{(projected * multiplier).toFixed(1)} pts</>
+                            )}
                           </span>
                         </div>
                       )}

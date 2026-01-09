@@ -13,6 +13,7 @@ import {
   type ScoringSettings,
 } from '@/lib/scoring';
 import NavBar from '@/components/NavBar';
+import MultiplierBadge from '@/components/MultiplierBadge';
 
 const CURRENT_ROUND = 'WC';
 
@@ -211,20 +212,29 @@ export default function RosterDetailPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {rosterItems.map((item) => (
-            <div key={item.slot} className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-              <div className="text-slate-400 text-xs uppercase mb-1">{item.slot}</div>
-              <div className="text-white font-semibold text-sm">
+            <div key={item.slot} className="bg-slate-800 border border-slate-700 rounded-xl p-4 relative">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-slate-400 text-xs uppercase font-bold">{item.slot}</div>
+                <MultiplierBadge multiplier={item.weeks} size="sm" />
+              </div>
+              <div className="text-white font-semibold">
                 {item.player ? item.player.full_name : '—'}
               </div>
-              <div className="text-slate-400 text-xs">
-                {item.player ? `${item.player.team} • ${item.player.position}` : 'Empty'}
+              <div className="text-slate-400 text-sm">
+                {item.player ? `${item.player.team} • ${item.player.position}` : 'Empty slot'}
               </div>
-              <div className="text-slate-400 text-xs mt-2">Multiplier: {item.weeks}x</div>
-              <div className="mt-1 text-xs">
+              <div className="mt-3 pt-3 border-t border-slate-700">
                 {item.basePoints !== null ? (
-                  <span className="text-emerald-300">Scored {item.basePoints.toFixed(2)} → {item.totalPoints?.toFixed(2)} pts</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 text-sm">
+                      {item.basePoints.toFixed(1)} {item.weeks > 1 ? `× ${item.weeks}` : 'pts'}
+                    </span>
+                    <span className="text-emerald-400 font-bold text-lg">
+                      {item.totalPoints?.toFixed(1)}
+                    </span>
+                  </div>
                 ) : (
-                  <span className="text-yellow-300">Pending</span>
+                  <span className="text-yellow-400 text-sm">Awaiting scores...</span>
                 )}
               </div>
             </div>
