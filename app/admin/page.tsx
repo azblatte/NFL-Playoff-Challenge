@@ -492,6 +492,12 @@ export default function AdminPage() {
               >
                 {syncing ? 'Syncing...' : 'Sync Scores Now'}
               </button>
+              <Link
+                href="/admin/rosters"
+                className="px-4 py-2 rounded-lg bg-slate-700 text-white font-semibold hover:bg-slate-600 transition"
+              >
+                Manage Rosters
+              </Link>
             </div>
           </div>
           <p className="mt-4 text-slate-400 text-sm">
@@ -591,6 +597,7 @@ export default function AdminPage() {
             <div><strong>Advance Round:</strong> Copy rosters to next round with incremented multipliers (1x → 2x → 3x → 4x).</div>
             <div><strong>Sync Scores:</strong> Manually pull the latest ESPN stats for the selected round.</div>
             <div><strong>Scoring Settings:</strong> Adjust full scoring rules in Admin → Scoring Settings.</div>
+            <div><strong>Manage Rosters:</strong> View, edit, or delete submitted rosters for the active league.</div>
             <div><strong>Member Management:</strong> Add/remove members in League Hub.</div>
           </div>
         </div>
