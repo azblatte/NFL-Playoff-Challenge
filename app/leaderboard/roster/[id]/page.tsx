@@ -234,7 +234,12 @@ export default function RosterDetailPage() {
                     </span>
                   </div>
                 ) : (
-                  <span className="text-yellow-400 text-sm">Awaiting scores...</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-yellow-400 text-sm">Awaiting scores...</span>
+                    {item.weeks > 1 && (
+                      <span className="text-slate-400 text-sm">Multiplier: {item.weeks}x</span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
