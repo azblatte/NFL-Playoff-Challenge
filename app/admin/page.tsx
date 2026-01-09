@@ -284,6 +284,28 @@ export default function AdminPage() {
     setSyncing(false);
   }
 
+  async function handleDeleteLeague(leagueId: string) {
+    if (!user) return;
+    const confirmed = window.confirm('Delete this league? This removes all rosters and members.');
+    if (!confirmed) return;
+    setProcessing(true);
+
+    const { error } = await supabase
+      .from('leagues')
+      .delete()
+      .eq('id', leagueId);
+
+    if (error) {
+      showMessage(error.message, 'error');
+      setProcessing(false);
+      return;
+    }
+
+    await Promise.all([loadSummaries(user.id), loadCounts()]);
+    showMessage('League deleted.', 'success');
+    setProcessing(false);
+  }
+
   function downloadBlob(blob: Blob) {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -547,6 +569,14 @@ export default function AdminPage() {
                         >
                           Copy Code
                         </button>
+                        {summary.role === 'owner' && (
+                          <button
+                            onClick={() => handleDeleteLeague(summary.league_id)}
+                            className="px-3 py-2 rounded-lg bg-red-600 text-white text-sm hover:bg-red-500 transition"
+                          >
+                            Delete League
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

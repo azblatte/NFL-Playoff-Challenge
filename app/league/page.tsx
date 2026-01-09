@@ -415,28 +415,6 @@ export default function LeaguePage() {
     setSaving(false);
   }
 
-  async function handleDeleteLeague(leagueId: string) {
-    if (!user) return;
-    const confirmed = window.confirm('Delete this league? This removes all rosters and members.');
-    if (!confirmed) return;
-    setSaving(true);
-
-    const { error } = await supabase
-      .from('leagues')
-      .delete()
-      .eq('id', leagueId);
-
-    if (error) {
-      showMessage(error.message, 'error');
-      setSaving(false);
-      return;
-    }
-
-    await loadMemberships(user.id);
-    showMessage('League deleted.', 'success');
-    setSaving(false);
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -520,17 +498,6 @@ export default function LeaguePage() {
                           >
                             Edit Roster
                           </Link>
-                        )}
-                        {membership.role === 'owner' && (
-                          <button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleDeleteLeague(league.id);
-                            }}
-                            className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition"
-                          >
-                            Delete League
-                          </button>
                         )}
                       </div>
                     </div>

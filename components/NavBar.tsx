@@ -18,6 +18,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
 ];
 
 const ACTIVE_LEAGUE_KEY = 'activeLeagueId';
+const ADMIN_UNLOCK_KEY = 'adminUnlocked';
 
 export default function NavBar() {
   const pathname = usePathname();
@@ -28,6 +29,10 @@ export default function NavBar() {
 
     async function loadAdminAccess() {
       if (typeof window === 'undefined') return;
+      if (window.localStorage.getItem(ADMIN_UNLOCK_KEY) === 'true') {
+        if (isActive) setShowAdmin(true);
+        return;
+      }
       const leagueId = window.localStorage.getItem(ACTIVE_LEAGUE_KEY);
       if (!leagueId) return;
 
