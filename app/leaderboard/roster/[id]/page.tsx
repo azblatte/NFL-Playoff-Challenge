@@ -12,6 +12,7 @@ import {
   type PlayerStats,
   type ScoringSettings,
 } from '@/lib/scoring';
+import NavBar from '@/components/NavBar';
 
 const CURRENT_ROUND = 'WC';
 
@@ -182,24 +183,18 @@ export default function RosterDetailPage() {
 
   return (
     <div className="min-h-screen bg-slate-900">
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+      <NavBar />
+
+      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold text-white">Roster Details</h1>
             <p className="text-slate-400 text-sm">{roster.profiles?.display_name || 'Unknown'} • {roster.round}</p>
           </div>
-          <div className="flex gap-2">
-            <Link href="/leaderboard" className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition">
-              Back to Leaderboard
-            </Link>
-            <Link href="/league/overview" className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition">
-              League Home
-            </Link>
-          </div>
+          <Link href="/leaderboard" className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition">
+            Back to Leaderboard
+          </Link>
         </div>
-      </header>
-
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {message && (
           <div className="p-4 rounded-xl bg-slate-800 border border-slate-700 text-slate-200">
             {message}

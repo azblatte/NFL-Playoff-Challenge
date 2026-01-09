@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import NavBar from '@/components/NavBar';
 import {
   WILD_CARD_MATCHUPS,
   PROJECTED_POINTS,
@@ -273,52 +274,27 @@ export default function RosterPage() {
 
   return (
     <div className="min-h-screen bg-slate-900">
-      {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span className="text-3xl">🏈</span>
-              <div>
-                <h1 className="text-xl font-bold text-white">NFL Playoff Challenge</h1>
-                <p className="text-slate-400 text-sm">{ROUND_NAMES[currentRound] || currentRound} Round</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-slate-400 text-sm">Projected Points</div>
-                <div className="text-2xl font-bold text-emerald-400">{getTotalProjectedPoints().toFixed(1)}</div>
-              </div>
-              <Link
-                href="/leaderboard"
-                className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition"
-              >
-                Leaderboard
-              </Link>
-              <Link
-                href="/league"
-                className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition"
-              >
-                League
-              </Link>
-              <Link
-                href="/admin"
-                className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition"
-              >
-                Admin
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 text-slate-400 hover:text-white transition"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <NavBar />
 
       <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="mb-6 bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-bold text-white">Roster</h1>
+            <p className="text-slate-400 text-sm">{ROUND_NAMES[currentRound] || currentRound} Round</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="text-right">
+              <div className="text-slate-400 text-sm">Projected Points</div>
+              <div className="text-2xl font-bold text-emerald-400">{getTotalProjectedPoints().toFixed(1)}</div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600 transition"
+            >
+              Log Out
+            </button>
+          </div>
+        </div>
         {/* Instructions */}
         <div className="mb-6 p-4 bg-blue-900/30 border border-blue-700 rounded-xl">
           <p className="text-blue-200 text-sm">

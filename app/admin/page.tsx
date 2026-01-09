@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import NavBar from '@/components/NavBar';
 
 const DEFAULT_LEAGUE_ID = '00000000-0000-0000-0000-000000000001';
 const ACTIVE_LEAGUE_KEY = 'activeLeagueId';
@@ -378,34 +379,37 @@ export default function AdminPage() {
 
   if (!adminUnlocked) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center px-4">
-        <div className="w-full max-w-md bg-slate-800 border border-slate-700 rounded-xl p-6">
-          <h1 className="text-xl font-bold text-white mb-2">Admin Login</h1>
-          <p className="text-slate-400 text-sm mb-6">
-            Enter the admin password to access management tools.
-          </p>
-          <label className="block text-sm text-slate-400 mb-2">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
-            className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-            placeholder="Admin password"
-          />
-          {authError && (
-            <div className="mt-3 text-sm text-red-300">{authError}</div>
-          )}
-          <button
-            onClick={handleAdminLogin}
-            className="mt-5 w-full py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-500 transition"
-          >
-            Unlock Admin
-          </button>
-          <div className="mt-4 text-center">
-            <Link href="/league" className="text-slate-400 text-sm hover:text-white transition">
-              Back to League Hub
-            </Link>
+      <div className="min-h-screen bg-slate-900">
+        <NavBar />
+        <div className="flex items-center justify-center px-4 py-12">
+          <div className="w-full max-w-md bg-slate-800 border border-slate-700 rounded-xl p-6">
+            <h1 className="text-xl font-bold text-white mb-2">Admin Login</h1>
+            <p className="text-slate-400 text-sm mb-6">
+              Enter the admin password to access management tools.
+            </p>
+            <label className="block text-sm text-slate-400 mb-2">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
+              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+              placeholder="Admin password"
+            />
+            {authError && (
+              <div className="mt-3 text-sm text-red-300">{authError}</div>
+            )}
+            <button
+              onClick={handleAdminLogin}
+              className="mt-5 w-full py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-500 transition"
+            >
+              Unlock Admin
+            </button>
+            <div className="mt-4 text-center">
+              <Link href="/league" className="text-slate-400 text-sm hover:text-white transition">
+                Back to League Hub
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -417,43 +421,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-slate-900">
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">⚙️</span>
-            <div>
-              <h1 className="text-xl font-bold text-white">Admin Dashboard</h1>
-              <p className="text-slate-400 text-sm">League management & controls</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Link
-              href="/league"
-              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition"
-            >
-              League Hub
-            </Link>
-            <Link
-              href="/roster"
-              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition"
-            >
-              Roster
-            </Link>
-            <Link
-              href="/leaderboard"
-              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition"
-            >
-              Leaderboard
-            </Link>
-            <button
-              onClick={handleAdminLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition"
-            >
-              Log Out
-            </button>
-          </div>
-        </div>
-      </header>
+      <NavBar />
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {message && (
@@ -604,6 +572,14 @@ export default function AdminPage() {
                 <div className="text-xl font-bold text-emerald-400">{activeLeagueSummary.league.join_code}</div>
               </div>
             </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                href="/admin/settings"
+                className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 transition"
+              >
+                Edit Scoring Settings
+              </Link>
+            </div>
           </div>
         )}
 
@@ -614,7 +590,7 @@ export default function AdminPage() {
             <div><strong>Download Backup:</strong> Export all rosters to CSV for Google Sheets backup.</div>
             <div><strong>Advance Round:</strong> Copy rosters to next round with incremented multipliers (1x → 2x → 3x → 4x).</div>
             <div><strong>Sync Scores:</strong> Manually pull the latest ESPN stats for the selected round.</div>
-            <div><strong>Scoring Format:</strong> Change in League Hub under Admin Settings.</div>
+            <div><strong>Scoring Settings:</strong> Adjust full scoring rules in Admin → Scoring Settings.</div>
             <div><strong>Member Management:</strong> Add/remove members in League Hub.</div>
           </div>
         </div>

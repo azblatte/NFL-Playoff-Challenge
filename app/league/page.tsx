@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { normalizeScoringSettings, type ScoringSettings } from '@/lib/scoring';
+import NavBar from '@/components/NavBar';
 
 const DEFAULT_LEAGUE_ID = '00000000-0000-0000-0000-000000000001';
 const ACTIVE_LEAGUE_KEY = 'activeLeagueId';
@@ -68,10 +69,6 @@ export default function LeaguePage() {
   const [createLeagueName, setCreateLeagueName] = useState('');
   const [createTeamName, setCreateTeamName] = useState('');
   const [createScoringFormat, setCreateScoringFormat] = useState<ScoringFormat>('PPR');
-  const [adminLeagueName, setAdminLeagueName] = useState('');
-  const [adminScoringFormat, setAdminScoringFormat] = useState<ScoringFormat>('PPR');
-  const [adminFieldGoalPoints, setAdminFieldGoalPoints] = useState(3);
-  const [adminExtraPointPoints, setAdminExtraPointPoints] = useState(1);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -237,17 +234,6 @@ export default function LeaguePage() {
   }, []);
 
   useEffect(() => {
-    const league = memberships.find((m) => m.leagues?.id === activeLeagueId)?.leagues || null;
-    if (league) {
-      setAdminLeagueName(league.name);
-      setAdminScoringFormat(league.scoring_format);
-      const normalized = normalizeScoringSettings(league.scoring_format, league.scoring_settings || undefined);
-      setAdminFieldGoalPoints(normalized.kicking.field_goal);
-      setAdminExtraPointPoints(normalized.kicking.extra_point);
-    }
-  }, [activeLeagueId, memberships]);
-
-  useEffect(() => {
     loadMembers();
     loadMyRosters();
   }, [activeLeagueId, memberships, user]);
@@ -387,34 +373,6 @@ export default function LeaguePage() {
     setSaving(false);
   }
 
-  async function handleUpdateLeague() {
-    if (!user || !activeLeague || !isAdmin) return;
-    setSaving(true);
-    setMessage('');
-
-    const nextSettings = normalizeScoringSettings(adminScoringFormat, activeLeague.scoring_settings || undefined);
-    nextSettings.kicking.field_goal = adminFieldGoalPoints;
-    nextSettings.kicking.extra_point = adminExtraPointPoints;
-    const { error } = await supabase
-      .from('leagues')
-      .update({
-        name: adminLeagueName.trim() || activeLeague.name,
-        scoring_format: adminScoringFormat,
-        scoring_settings: nextSettings,
-      })
-      .eq('id', activeLeague.id);
-
-    if (error) {
-      showMessage(error.message, 'error');
-      setSaving(false);
-      return;
-    }
-
-    await loadMemberships(user.id);
-    showMessage('League settings updated.', 'success');
-    setSaving(false);
-  }
-
   async function handleCopyJoinCode() {
     if (!activeLeague?.join_code) return;
     try {
@@ -500,37 +458,7 @@ export default function LeaguePage() {
 
   return (
     <div className="min-h-screen bg-slate-900">
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🏈</span>
-            <div>
-              <h1 className="text-xl font-bold text-white">League Hub</h1>
-              <p className="text-slate-400 text-sm">Create, join, and manage leagues</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Link
-              href="/roster"
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition font-medium"
-            >
-              Edit Roster
-            </Link>
-            <Link
-              href="/leaderboard"
-              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition"
-            >
-              Leaderboard
-            </Link>
-            <Link
-              href="/admin"
-              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition"
-            >
-              Admin
-            </Link>
-          </div>
-        </div>
-      </header>
+      <NavBar />
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {message && (
@@ -733,70 +661,31 @@ export default function LeaguePage() {
           </div>
         </div>
 
-        {/* League Admin Settings */}
+        {/* League Quick Actions */}
         {activeLeague && isAdmin && (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-white">League Settings</h2>
-              <button
-                onClick={handleCopyJoinCode}
-                className="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm hover:bg-slate-600 transition"
-              >
-                Copy Join Code: {activeLeague.join_code}
-              </button>
-            </div>
-            <p className="text-slate-400 text-sm mb-4">
-              Adjust league details and customize kicker scoring.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <label className="block text-sm text-slate-400 mb-2">League name</label>
-                <input
-                  value={adminLeagueName}
-                  onChange={(e) => setAdminLeagueName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                />
+                <h2 className="text-lg font-bold text-white">League Admin</h2>
+                <p className="text-slate-400 text-sm">
+                  {activeLeague.name} • {activeLeague.scoring_format} • Code: <span className="font-mono text-emerald-400">{activeLeague.join_code}</span>
+                </p>
               </div>
-              <div>
-                <label className="block text-sm text-slate-400 mb-2">Scoring format</label>
-                <select
-                  value={adminScoringFormat}
-                  onChange={(e) => setAdminScoringFormat(e.target.value as ScoringFormat)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleCopyJoinCode}
+                  className="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm hover:bg-slate-600 transition"
                 >
-                  <option value="PPR">PPR</option>
-                  <option value="HALF_PPR">Half PPR</option>
-                  <option value="STANDARD">Standard</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-slate-400 mb-2">Field Goal Points</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={adminFieldGoalPoints}
-                  onChange={(e) => setAdminFieldGoalPoints(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-slate-400 mb-2">Extra Point Points</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={adminExtraPointPoints}
-                  onChange={(e) => setAdminExtraPointPoints(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                />
+                  Copy Join Code
+                </button>
+                <Link
+                  href="/admin/settings"
+                  className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 transition"
+                >
+                  Scoring Settings
+                </Link>
               </div>
             </div>
-            <button
-              onClick={handleUpdateLeague}
-              disabled={saving}
-              className="mt-4 px-6 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-500 transition disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
           </div>
         )}
 
