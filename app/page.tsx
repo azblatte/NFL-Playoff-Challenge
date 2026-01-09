@@ -19,7 +19,7 @@ export default function Home() {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.push('/roster');
+        router.push('/league');
       } else {
         setCheckingAuth(false);
       }
@@ -29,7 +29,7 @@ export default function Home() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        router.push('/roster');
+        router.push('/league');
       }
     });
 
@@ -51,7 +51,7 @@ export default function Home() {
 
         if (signInError) throw signInError;
 
-        router.push('/roster');
+        router.push('/league');
       } else {
         // Sign up
         if (!displayName.trim()) {
@@ -82,7 +82,7 @@ export default function Home() {
           }
         }
 
-        router.push('/roster');
+        router.push('/league');
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
