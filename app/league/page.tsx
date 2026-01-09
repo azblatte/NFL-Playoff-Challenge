@@ -78,7 +78,6 @@ export default function LeaguePage() {
 
   const activeLeague = activeMembership?.leagues || null;
   const isOwner = activeLeague?.owner_user_id && user?.id === activeLeague.owner_user_id;
-  const isAdmin = activeMembership?.role === 'admin' || !!isOwner;
 
   function showMessage(msg: string, type: 'success' | 'error' | 'info' = 'info') {
     setMessage(msg);
@@ -373,16 +372,6 @@ export default function LeaguePage() {
     setSaving(false);
   }
 
-  async function handleCopyJoinCode() {
-    if (!activeLeague?.join_code) return;
-    try {
-      await navigator.clipboard.writeText(activeLeague.join_code);
-      showMessage('Join code copied to clipboard!', 'success');
-    } catch {
-      showMessage(`Join code: ${activeLeague.join_code}`, 'info');
-    }
-  }
-
   async function handleUpdateMemberRole(userId: string, role: 'admin' | 'member') {
     if (!isOwner || !activeLeague) return;
     setSaving(true);
@@ -660,34 +649,6 @@ export default function LeaguePage() {
             </button>
           </div>
         </div>
-
-        {/* League Quick Actions */}
-        {activeLeague && isAdmin && (
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-bold text-white">League Admin</h2>
-                <p className="text-slate-400 text-sm">
-                  {activeLeague.name} • {activeLeague.scoring_format} • Code: <span className="font-mono text-emerald-400">{activeLeague.join_code}</span>
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={handleCopyJoinCode}
-                  className="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm hover:bg-slate-600 transition"
-                >
-                  Copy Join Code
-                </button>
-                <Link
-                  href="/admin/settings"
-                  className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 transition"
-                >
-                  Scoring Settings
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Members List */}
         {activeLeague && members.length > 0 && (

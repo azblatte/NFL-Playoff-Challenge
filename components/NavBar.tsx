@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 type NavItem = {
   href: string;
@@ -9,15 +11,50 @@ type NavItem = {
   icon: string;
 };
 
-const NAV_ITEMS: NavItem[] = [
+const BASE_NAV_ITEMS: NavItem[] = [
   { href: '/roster', label: 'Roster', icon: '📋' },
   { href: '/leaderboard', label: 'Standings', icon: '🏆' },
   { href: '/league', label: 'League', icon: '🏈' },
-  { href: '/admin', label: 'Admin', icon: '⚙️' },
 ];
+
+const ACTIVE_LEAGUE_KEY = 'activeLeagueId';
 
 export default function NavBar() {
   const pathname = usePathname();
+  const [showAdmin, setShowAdmin] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadAdminAccess() {
+      if (typeof window === 'undefined') return;
+      const leagueId = window.localStorage.getItem(ACTIVE_LEAGUE_KEY);
+      if (!leagueId) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('league_members')
+        .select('role')
+        .eq('league_id', leagueId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (!isActive) return;
+      setShowAdmin(data?.role === 'owner' || data?.role === 'admin');
+    }
+
+    loadAdminAccess();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const showAdminLink = showAdmin || pathname?.startsWith('/admin');
+  const navItems = showAdminLink
+    ? [...BASE_NAV_ITEMS, { href: '/admin', label: 'Admin', icon: '⚙️' }]
+    : BASE_NAV_ITEMS;
 
   return (
     <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
@@ -31,7 +68,7 @@ export default function NavBar() {
 
           {/* Navigation */}
           <nav className="flex items-center gap-1">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
               return (
                 <Link
