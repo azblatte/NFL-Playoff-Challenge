@@ -44,12 +44,14 @@ export default function AdminPage() {
   const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [password, setPassword] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [summaries, setSummaries] = useState<LeagueSummary[]>([]);
   const [counts, setCounts] = useState({ leagues: 0, rosters: 0, players: 0 });
   const [activeLeagueId, setActiveLeagueId] = useState(DEFAULT_LEAGUE_ID);
   const [currentRound, setCurrentRound] = useState<Round>('WC');
   const [processing, setProcessing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -179,6 +181,7 @@ export default function AdminPage() {
         window.localStorage.setItem(ADMIN_UNLOCK_KEY, 'true');
       }
       setAdminUnlocked(true);
+      setAdminPassword(password.trim());
       setPassword('');
     } catch {
       setAuthError('Login failed. Try again.');
@@ -190,6 +193,7 @@ export default function AdminPage() {
       window.localStorage.removeItem(ADMIN_UNLOCK_KEY);
     }
     setAdminUnlocked(false);
+    setAdminPassword('');
     setMessage('');
     setAuthError('');
   }
@@ -200,7 +204,7 @@ export default function AdminPage() {
       const leagueParam = activeLeagueId !== DEFAULT_LEAGUE_ID ? `league_id=${activeLeagueId}&` : '';
       const res = await fetch(`/api/admin/backup?${leagueParam}round=${currentRound}`, {
         headers: {
-          'x-admin-password': password || window.localStorage.getItem('adminPassword') || '',
+          'x-admin-password': adminPassword,
         },
       });
 
@@ -223,6 +227,7 @@ export default function AdminPage() {
           return;
         }
 
+        setAdminPassword(storedPwd);
         const blob = await res2.blob();
         downloadBlob(blob);
       } else {
@@ -233,6 +238,49 @@ export default function AdminPage() {
       showMessage('Failed to download backup.', 'error');
     }
     setProcessing(false);
+  }
+
+  async function handleManualSync() {
+    setSyncing(true);
+    try {
+      const res = await fetch(`/api/admin/sync-scores?round=${currentRound}`, {
+        headers: {
+          'x-admin-password': adminPassword,
+        },
+      });
+
+      if (!res.ok) {
+        const storedPwd = prompt('Enter admin password to sync scores:');
+        if (!storedPwd) {
+          showMessage('Sync cancelled.', 'info');
+          setSyncing(false);
+          return;
+        }
+
+        const res2 = await fetch(`/api/admin/sync-scores?round=${currentRound}`, {
+          headers: { 'x-admin-password': storedPwd },
+        });
+
+        if (!res2.ok) {
+          const errorData = await res2.json().catch(() => null);
+          showMessage(errorData?.error || 'Failed to sync scores. Check password.', 'error');
+          setSyncing(false);
+          return;
+        }
+
+        const data = await res2.json();
+        setAdminPassword(storedPwd);
+        showMessage(`Sync complete: ${data.gamesProcessed} games, ${data.playersUpdated} players.`, 'success');
+        setSyncing(false);
+        return;
+      }
+
+      const data = await res.json();
+      showMessage(`Sync complete: ${data.gamesProcessed} games, ${data.playersUpdated} players.`, 'success');
+    } catch (err) {
+      showMessage('Failed to sync scores.', 'error');
+    }
+    setSyncing(false);
   }
 
   function downloadBlob(blob: Blob) {
@@ -365,6 +413,7 @@ export default function AdminPage() {
   }
 
   const activeLeagueSummary = summaries.find(s => s.league_id === activeLeagueId);
+  const isBusy = processing || syncing;
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -456,17 +505,24 @@ export default function AdminPage() {
             <div className="flex gap-3 sm:mt-6">
               <button
                 onClick={handleAdvanceRound}
-                disabled={processing || currentRound === 'SB'}
+                disabled={isBusy || currentRound === 'SB'}
                 className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {processing ? 'Processing...' : 'Advance Round'}
               </button>
               <button
                 onClick={handleDownloadBackup}
-                disabled={processing}
+                disabled={isBusy}
                 className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-500 transition disabled:opacity-50"
               >
                 {processing ? 'Downloading...' : 'Download Backup CSV'}
+              </button>
+              <button
+                onClick={handleManualSync}
+                disabled={isBusy}
+                className="px-4 py-2 rounded-lg bg-amber-600 text-white font-semibold hover:bg-amber-500 transition disabled:opacity-50"
+              >
+                {syncing ? 'Syncing...' : 'Sync Scores Now'}
               </button>
             </div>
           </div>
@@ -557,6 +613,7 @@ export default function AdminPage() {
           <div className="text-slate-300 text-sm space-y-2">
             <div><strong>Download Backup:</strong> Export all rosters to CSV for Google Sheets backup.</div>
             <div><strong>Advance Round:</strong> Copy rosters to next round with incremented multipliers (1x → 2x → 3x → 4x).</div>
+            <div><strong>Sync Scores:</strong> Manually pull the latest ESPN stats for the selected round.</div>
             <div><strong>Scoring Format:</strong> Change in League Hub under Admin Settings.</div>
             <div><strong>Member Management:</strong> Add/remove members in League Hub.</div>
           </div>
