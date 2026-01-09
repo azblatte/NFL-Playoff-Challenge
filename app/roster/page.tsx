@@ -69,7 +69,13 @@ export default function RosterPage() {
   const [showTier4, setShowTier4] = useState(true);
   const [activeLeagueId, setActiveLeagueId] = useState(DEFAULT_LEAGUE_ID);
   const [currentRound, setCurrentRound] = useState('WC');
+  const [userLeagues, setUserLeagues] = useState<{id: string, name: string}[]>([]);
+  const [activeLeagueName, setActiveLeagueName] = useState('');
   const playerPanelRef = useRef<HTMLDivElement | null>(null);
+
+  // Count filled roster slots
+  const filledSlots = Object.values(roster).filter(v => v).length;
+  const isRosterComplete = filledSlots === 8;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -118,6 +124,37 @@ export default function RosterPage() {
       return;
     }
     setUser(user);
+    loadUserLeagues(user.id);
+  }
+
+  async function loadUserLeagues(userId: string) {
+    const { data } = await supabase
+      .from('league_members')
+      .select('league_id, leagues:league_id (id, name)')
+      .eq('user_id', userId);
+
+    if (data) {
+      const leagues = data
+        .map(d => d.leagues as unknown as { id: string; name: string } | null)
+        .filter((l): l is { id: string; name: string } => l !== null);
+      setUserLeagues(leagues);
+
+      // Set active league name
+      const activeName = leagues.find(l => l.id === activeLeagueId)?.name;
+      if (activeName) setActiveLeagueName(activeName);
+    }
+  }
+
+  function handleLeagueChange(leagueId: string) {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(ACTIVE_LEAGUE_KEY, leagueId);
+    }
+    setActiveLeagueId(leagueId);
+    const leagueName = userLeagues.find(l => l.id === leagueId)?.name || '';
+    setActiveLeagueName(leagueName);
+    // Clear current roster to force reload
+    setRoster({ qb: '', rb1: '', rb2: '', wr1: '', wr2: '', te: '', k: '', dst: '' });
+    setWeeksHeld({ qb: 1, rb1: 1, rb2: 1, wr1: 1, wr2: 1, te: 1, k: 1, dst: 1 });
   }
 
   async function loadPlayers() {
@@ -168,6 +205,15 @@ export default function RosterPage() {
 
   async function saveRoster() {
     if (!user) return;
+
+    // Validate roster - all 8 slots must be filled
+    const emptySlots = ROSTER_SLOTS.filter(slot => !roster[slot.key]);
+    if (emptySlots.length > 0) {
+      const missing = emptySlots.map(s => s.shortLabel).join(', ');
+      setMessage(`Please fill all positions before submitting. Missing: ${missing}`);
+      return;
+    }
+
     setSaving(true);
     setMessage('');
 
@@ -296,7 +342,9 @@ export default function RosterPage() {
         <div className="mb-6 bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-white">Roster</h1>
-            <p className="text-slate-400 text-sm">{ROUND_NAMES[currentRound] || currentRound} Round</p>
+            <p className="text-slate-400 text-sm">
+              {activeLeagueName && `${activeLeagueName} • `}{ROUND_NAMES[currentRound] || currentRound} Round
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
             <div className="text-right">
@@ -311,6 +359,28 @@ export default function RosterPage() {
             </button>
           </div>
         </div>
+        {/* League Selector */}
+        {userLeagues.length > 1 && (
+          <div className="mb-6 bg-slate-800 border border-slate-700 rounded-xl p-4">
+            <div className="text-slate-400 text-sm mb-3">Select League</div>
+            <div className="flex flex-wrap gap-2">
+              {userLeagues.map(league => (
+                <button
+                  key={league.id}
+                  onClick={() => handleLeagueChange(league.id)}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    activeLeagueId === league.id
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  {league.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Multiplier Legend */}
         <div className="mb-6 p-4 bg-slate-800 border border-slate-700 rounded-xl">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -585,7 +655,7 @@ export default function RosterPage() {
         {/* Message */}
         {message && (
           <div className={`mb-4 p-4 rounded-xl ${
-            message.includes('Error')
+            message.includes('Error') || message.includes('Missing')
               ? 'bg-red-900/50 border border-red-700 text-red-200'
               : 'bg-emerald-900/50 border border-emerald-700 text-emerald-200'
           }`}>
@@ -597,10 +667,18 @@ export default function RosterPage() {
         <div className="flex gap-4">
           <button
             onClick={saveRoster}
-            disabled={saving}
-            className="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-emerald-700 transition disabled:opacity-50 shadow-lg"
+            disabled={saving || !isRosterComplete}
+            className={`flex-1 py-4 rounded-xl font-bold text-lg transition shadow-lg ${
+              isRosterComplete
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                : 'bg-slate-600 text-slate-300 cursor-not-allowed'
+            } disabled:opacity-50`}
           >
-            {saving ? 'Saving...' : 'Save Roster'}
+            {saving
+              ? 'Saving...'
+              : isRosterComplete
+                ? 'Save Roster'
+                : `Fill All Slots (${filledSlots}/8)`}
           </button>
           <Link
             href="/leaderboard"
