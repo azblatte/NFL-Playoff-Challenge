@@ -457,6 +457,7 @@ export default function AdminPage() {
         )}
 
         {/* Stats Overview */}
+        <div className="text-slate-400 text-sm">Global totals across all leagues.</div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
             <div className="text-slate-400 text-sm">Total Leagues</div>
