@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useAdminSession } from '@/components/AdminSessionProvider';
 
 type NavItem = {
   href: string;
@@ -18,21 +19,21 @@ const BASE_NAV_ITEMS: NavItem[] = [
 ];
 
 const ACTIVE_LEAGUE_KEY = 'activeLeagueId';
-const ADMIN_UNLOCK_KEY = 'adminUnlocked';
 
 export default function NavBar() {
   const pathname = usePathname();
   const [showAdmin, setShowAdmin] = useState(false);
+  const { adminUnlocked } = useAdminSession();
 
   useEffect(() => {
     let isActive = true;
 
     async function loadAdminAccess() {
-      if (typeof window === 'undefined') return;
-      if (window.localStorage.getItem(ADMIN_UNLOCK_KEY) === 'true') {
+      if (adminUnlocked) {
         if (isActive) setShowAdmin(true);
         return;
       }
+      if (typeof window === 'undefined') return;
       const leagueId = window.localStorage.getItem(ACTIVE_LEAGUE_KEY);
       if (!leagueId) return;
 
@@ -54,7 +55,7 @@ export default function NavBar() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [adminUnlocked]);
 
   const showAdminLink = showAdmin || pathname?.startsWith('/admin');
   const navItems = showAdminLink

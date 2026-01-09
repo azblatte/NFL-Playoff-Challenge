@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import NavBar from '@/components/NavBar';
+import { useAdminSession } from '@/components/AdminSessionProvider';
 
 const DEFAULT_LEAGUE_ID = '00000000-0000-0000-0000-000000000001';
 const ACTIVE_LEAGUE_KEY = 'activeLeagueId';
-const ADMIN_UNLOCK_KEY = 'adminUnlocked';
 
 const ROUNDS = ['WC', 'DIV', 'CONF', 'SB'] as const;
 type Round = typeof ROUNDS[number];
@@ -57,11 +57,10 @@ const ROSTER_SLOTS = [
 
 export default function AdminRostersPage() {
   const router = useRouter();
+  const { adminUnlocked, adminPassword, setAdminUnlocked, setAdminPassword } = useAdminSession();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [password, setPassword] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
@@ -79,7 +78,6 @@ export default function AdminRostersPage() {
   useEffect(() => {
     checkUser();
     if (typeof window !== 'undefined') {
-      setAdminUnlocked(window.localStorage.getItem(ADMIN_UNLOCK_KEY) === 'true');
       const savedLeagueId = window.localStorage.getItem(ACTIVE_LEAGUE_KEY);
       if (savedLeagueId) setActiveLeagueId(savedLeagueId);
     }
@@ -183,9 +181,6 @@ export default function AdminRostersPage() {
         return;
       }
 
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(ADMIN_UNLOCK_KEY, 'true');
-      }
       setAdminUnlocked(true);
       setAdminPassword(password.trim());
       setPassword('');

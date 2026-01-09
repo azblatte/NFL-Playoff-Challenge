@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import NavBar from '@/components/NavBar';
+import { useAdminSession } from '@/components/AdminSessionProvider';
 
 const DEFAULT_LEAGUE_ID = '00000000-0000-0000-0000-000000000001';
 const ACTIVE_LEAGUE_KEY = 'activeLeagueId';
-const ADMIN_UNLOCK_KEY = 'adminUnlocked';
 
 const ROUNDS = ['WC', 'DIV', 'CONF', 'SB'] as const;
 type Round = typeof ROUNDS[number];
@@ -39,13 +39,12 @@ type LeagueSummary = {
 
 export default function AdminPage() {
   const router = useRouter();
+  const { adminUnlocked, adminPassword, setAdminUnlocked, setAdminPassword, clearAdminSession } = useAdminSession();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
-  const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [password, setPassword] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [summaries, setSummaries] = useState<LeagueSummary[]>([]);
   const [counts, setCounts] = useState({ leagues: 0, rosters: 0, players: 0 });
@@ -57,7 +56,6 @@ export default function AdminPage() {
   useEffect(() => {
     checkUser();
     if (typeof window !== 'undefined') {
-      setAdminUnlocked(window.localStorage.getItem(ADMIN_UNLOCK_KEY) === 'true');
       const savedLeagueId = window.localStorage.getItem(ACTIVE_LEAGUE_KEY);
       if (savedLeagueId) setActiveLeagueId(savedLeagueId);
     }
@@ -178,9 +176,6 @@ export default function AdminPage() {
         return;
       }
 
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(ADMIN_UNLOCK_KEY, 'true');
-      }
       setAdminUnlocked(true);
       setAdminPassword(password.trim());
       setPassword('');
@@ -190,11 +185,7 @@ export default function AdminPage() {
   }
 
   function handleAdminLogout() {
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(ADMIN_UNLOCK_KEY);
-    }
-    setAdminUnlocked(false);
-    setAdminPassword('');
+    clearAdminSession();
     setMessage('');
     setAuthError('');
   }
