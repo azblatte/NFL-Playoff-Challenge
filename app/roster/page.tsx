@@ -15,8 +15,14 @@ import {
 } from '@/lib/matchups';
 
 const DEFAULT_LEAGUE_ID = '00000000-0000-0000-0000-000000000001';
-const CURRENT_ROUND = 'WC';
 const ACTIVE_LEAGUE_KEY = 'activeLeagueId';
+
+const ROUND_NAMES: Record<string, string> = {
+  WC: 'Wild Card',
+  DIV: 'Divisional',
+  CONF: 'Conference',
+  SB: 'Super Bowl',
+};
 
 interface Player {
   player_key: string;
@@ -51,25 +57,46 @@ export default function RosterPage() {
   const [roster, setRoster] = useState<Record<string, string>>({
     qb: '', rb1: '', rb2: '', wr1: '', wr2: '', te: '', k: '', dst: ''
   });
+  const [weeksHeld, setWeeksHeld] = useState<Record<string, number>>({
+    qb: 1, rb1: 1, rb2: 1, wr1: 1, wr2: 1, te: 1, k: 1, dst: 1
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [activeSlot, setActiveSlot] = useState<string | null>(null);
   const [showTier4, setShowTier4] = useState(true);
   const [activeLeagueId, setActiveLeagueId] = useState(DEFAULT_LEAGUE_ID);
+  const [currentRound, setCurrentRound] = useState('WC');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedLeagueId = window.localStorage.getItem(ACTIVE_LEAGUE_KEY);
       if (savedLeagueId) setActiveLeagueId(savedLeagueId);
     }
+    loadCurrentRound();
     checkUser();
     loadPlayers();
   }, []);
 
   useEffect(() => {
-    loadRoster();
-  }, [activeLeagueId]);
+    if (currentRound) {
+      loadRoster();
+    }
+  }, [activeLeagueId, currentRound]);
+
+  async function loadCurrentRound() {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const settings = await res.json();
+        if (settings.current_round) {
+          setCurrentRound(settings.current_round);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load current round:', err);
+    }
+  }
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -99,7 +126,7 @@ export default function RosterPage() {
       .select('*')
       .eq('user_id', user.id)
       .eq('league_id', activeLeagueId)
-      .eq('round', CURRENT_ROUND)
+      .eq('round', currentRound)
       .single();
 
     if (data) {
@@ -113,6 +140,16 @@ export default function RosterPage() {
         k: data.k_player_key || '',
         dst: data.dst_player_key || ''
       });
+      setWeeksHeld({
+        qb: data.qb_weeks_held || 1,
+        rb1: data.rb1_weeks_held || 1,
+        rb2: data.rb2_weeks_held || 1,
+        wr1: data.wr1_weeks_held || 1,
+        wr2: data.wr2_weeks_held || 1,
+        te: data.te_weeks_held || 1,
+        k: data.k_weeks_held || 1,
+        dst: data.dst_weeks_held || 1
+      });
     }
   }
 
@@ -121,21 +158,49 @@ export default function RosterPage() {
     setSaving(true);
     setMessage('');
 
+    // Get current roster to check for player changes
+    const { data: existingRoster } = await supabase
+      .from('rosters')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('league_id', activeLeagueId)
+      .eq('round', currentRound)
+      .single();
+
+    // Calculate weeks_held for each slot
+    // If player changed, reset to 1. If same player, keep existing weeks_held
+    const calcWeeksHeld = (slotKey: string, playerKey: string | null) => {
+      if (!playerKey) return 1;
+      if (!existingRoster) return 1;
+      const existingKey = existingRoster[`${slotKey}_player_key`];
+      const existingWeeks = existingRoster[`${slotKey}_weeks_held`] || 1;
+      // If same player, keep their weeks_held (will be incremented on round advance)
+      return existingKey === playerKey ? existingWeeks : 1;
+    };
+
     try {
       const { error } = await supabase
         .from('rosters')
         .upsert({
           user_id: user.id,
           league_id: activeLeagueId,
-          round: CURRENT_ROUND,
+          round: currentRound,
           qb_player_key: roster.qb || null,
+          qb_weeks_held: calcWeeksHeld('qb', roster.qb || null),
           rb1_player_key: roster.rb1 || null,
+          rb1_weeks_held: calcWeeksHeld('rb1', roster.rb1 || null),
           rb2_player_key: roster.rb2 || null,
+          rb2_weeks_held: calcWeeksHeld('rb2', roster.rb2 || null),
           wr1_player_key: roster.wr1 || null,
+          wr1_weeks_held: calcWeeksHeld('wr1', roster.wr1 || null),
           wr2_player_key: roster.wr2 || null,
+          wr2_weeks_held: calcWeeksHeld('wr2', roster.wr2 || null),
           te_player_key: roster.te || null,
+          te_weeks_held: calcWeeksHeld('te', roster.te || null),
           k_player_key: roster.k || null,
+          k_weeks_held: calcWeeksHeld('k', roster.k || null),
           dst_player_key: roster.dst || null,
+          dst_weeks_held: calcWeeksHeld('dst', roster.dst || null),
           submitted_at: new Date().toISOString(),
         }, {
           onConflict: 'user_id,league_id,round'
@@ -180,16 +245,21 @@ export default function RosterPage() {
 
   const selectPlayer = (slotKey: string, playerKey: string) => {
     setRoster({ ...roster, [slotKey]: playerKey });
+    // New player = reset weeks to 1
+    setWeeksHeld({ ...weeksHeld, [slotKey]: 1 });
     setActiveSlot(null);
   };
 
   const clearSlot = (slotKey: string) => {
     setRoster({ ...roster, [slotKey]: '' });
+    setWeeksHeld({ ...weeksHeld, [slotKey]: 1 });
   };
 
   const getTotalProjectedPoints = () => {
-    return Object.values(roster).reduce((total, playerKey) => {
-      return total + (PROJECTED_POINTS[playerKey] || 0);
+    return Object.entries(roster).reduce((total, [slotKey, playerKey]) => {
+      const basePoints = PROJECTED_POINTS[playerKey] || 0;
+      const multiplier = weeksHeld[slotKey] || 1;
+      return total + (basePoints * multiplier);
     }, 0);
   };
 
@@ -211,7 +281,7 @@ export default function RosterPage() {
               <span className="text-3xl">🏈</span>
               <div>
                 <h1 className="text-xl font-bold text-white">NFL Playoff Challenge</h1>
-                <p className="text-slate-400 text-sm">Wild Card Round</p>
+                <p className="text-slate-400 text-sm">{ROUND_NAMES[currentRound] || currentRound} Round</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -253,7 +323,7 @@ export default function RosterPage() {
         <div className="mb-6 p-4 bg-blue-900/30 border border-blue-700 rounded-xl">
           <p className="text-blue-200 text-sm">
             <strong>Pick your 8-player roster!</strong> Click a slot below, then select a player.
-            Players on bye (DEN, SEA) will score in the Divisional Round. Keep players across rounds to earn multipliers!
+            Keep players across rounds to earn multipliers (up to 4x)! Players with higher multipliers are shown with badges.
           </p>
         </div>
 
@@ -266,6 +336,7 @@ export default function RosterPage() {
               const matchup = selectedPlayer ? WILD_CARD_MATCHUPS[selectedPlayer.team] : null;
               const projected = roster[slot.key] ? PROJECTED_POINTS[roster[slot.key]] : null;
               const teamColors = selectedPlayer ? TEAM_COLORS[selectedPlayer.team] : null;
+              const multiplier = weeksHeld[slot.key] || 1;
 
               return (
                 <div
@@ -284,6 +355,13 @@ export default function RosterPage() {
                   <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/50 rounded text-xs font-bold text-white">
                     {slot.shortLabel}
                   </div>
+
+                  {/* Multiplier Badge */}
+                  {selectedPlayer && multiplier > 1 && (
+                    <div className="absolute top-2 right-8 px-2 py-0.5 bg-emerald-600 rounded text-xs font-bold text-white">
+                      {multiplier}x
+                    </div>
+                  )}
 
                   {/* Clear Button */}
                   {selectedPlayer && (
@@ -329,11 +407,11 @@ export default function RosterPage() {
                           </div>
                         </div>
                       )}
-                      {/* Projected Points */}
+                      {/* Projected Points with Multiplier */}
                       {projected !== null && (
                         <div className="mt-1 text-center">
                           <span className="inline-block px-2 py-0.5 bg-black/30 rounded text-emerald-300 text-xs font-bold">
-                            {projected.toFixed(1)} pts
+                            {(projected * multiplier).toFixed(1)} pts
                           </span>
                         </div>
                       )}

@@ -11,8 +11,14 @@ import {
 } from '@/lib/scoring';
 
 const DEFAULT_LEAGUE_ID = '00000000-0000-0000-0000-000000000001';
-const CURRENT_ROUND = 'WC';
 const ACTIVE_LEAGUE_KEY = 'activeLeagueId';
+
+const ROUND_NAMES: Record<string, string> = {
+  WC: 'Wild Card',
+  DIV: 'Divisional',
+  CONF: 'Conference',
+  SB: 'Super Bowl',
+};
 
 type LeaderboardEntry = {
   teamName: string;
@@ -28,19 +34,37 @@ export default function Leaderboard() {
   const [activeLeagueId, setActiveLeagueId] = useState(DEFAULT_LEAGUE_ID);
   const [leagueName, setLeagueName] = useState('');
   const [leagueSettings, setLeagueSettings] = useState<ScoringSettings | null>(null);
+  const [currentRound, setCurrentRound] = useState('WC');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedLeagueId = window.localStorage.getItem(ACTIVE_LEAGUE_KEY);
       if (savedLeagueId) setActiveLeagueId(savedLeagueId);
     }
+    loadCurrentRound();
   }, []);
 
   useEffect(() => {
-    loadLeaderboard();
-    const interval = setInterval(loadLeaderboard, 30000);
-    return () => clearInterval(interval);
-  }, [activeLeagueId]);
+    if (currentRound) {
+      loadLeaderboard();
+      const interval = setInterval(loadLeaderboard, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [activeLeagueId, currentRound]);
+
+  async function loadCurrentRound() {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const settings = await res.json();
+        if (settings.current_round) {
+          setCurrentRound(settings.current_round);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load current round:', err);
+    }
+  }
 
   async function loadLeaderboard() {
     try {
@@ -66,7 +90,7 @@ export default function Leaderboard() {
         .from('rosters')
         .select('*, profiles:user_id (display_name)')
         .eq('league_id', activeLeagueId)
-        .eq('round', CURRENT_ROUND);
+        .eq('round', currentRound);
 
       if (!rosters) return;
 
@@ -85,7 +109,7 @@ export default function Leaderboard() {
       const { data: scores } = await supabase
         .from('player_scores')
         .select('player_key, points, stats')
-        .eq('round', CURRENT_ROUND);
+        .eq('round', currentRound);
 
       const scoreMap = new Map(scores?.map(s => [s.player_key, s]) || []);
 
@@ -147,7 +171,7 @@ export default function Leaderboard() {
             <span className="text-2xl">🏆</span>
             <div>
               <h1 className="text-xl font-bold text-white">Leaderboard</h1>
-              <p className="text-slate-400 text-sm">{leagueName || 'Loading...'} - {CURRENT_ROUND} Round</p>
+              <p className="text-slate-400 text-sm">{leagueName || 'Loading...'} - {ROUND_NAMES[currentRound] || currentRound}</p>
             </div>
           </div>
           <div className="flex gap-2">

@@ -15,7 +15,13 @@ import {
 
 const DEFAULT_LEAGUE_ID = '00000000-0000-0000-0000-000000000001';
 const ACTIVE_LEAGUE_KEY = 'activeLeagueId';
-const CURRENT_ROUND = 'WC';
+
+const ROUND_NAMES: Record<string, string> = {
+  WC: 'Wild Card',
+  DIV: 'Divisional',
+  CONF: 'Conference',
+  SB: 'Super Bowl',
+};
 
 const ROSTER_FIELDS = [
   { key: 'qb_player_key', label: 'QB', weeks: 'qb_weeks_held' },
@@ -88,6 +94,7 @@ export default function LeagueOverviewPage() {
   const [scores, setScores] = useState<Record<string, PlayerScoreRow>>({});
   const [memberTeams, setMemberTeams] = useState<Record<string, string>>({});
   const [leagueSettings, setLeagueSettings] = useState<ScoringSettings | null>(null);
+  const [currentRound, setCurrentRound] = useState('WC');
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -99,6 +106,19 @@ export default function LeagueOverviewPage() {
     if (typeof window !== 'undefined') {
       const savedLeagueId = window.localStorage.getItem(ACTIVE_LEAGUE_KEY);
       if (savedLeagueId) setActiveLeagueId(savedLeagueId);
+    }
+
+    // Load current round from settings
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const settings = await res.json();
+        if (settings.current_round) {
+          setCurrentRound(settings.current_round);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load current round:', err);
     }
   }
 
@@ -129,7 +149,7 @@ export default function LeagueOverviewPage() {
         .from('rosters')
         .select('id, user_id, submitted_at, profiles:user_id (display_name), qb_player_key, qb_weeks_held, rb1_player_key, rb1_weeks_held, rb2_player_key, rb2_weeks_held, wr1_player_key, wr1_weeks_held, wr2_player_key, wr2_weeks_held, te_player_key, te_weeks_held, k_player_key, k_weeks_held, dst_player_key, dst_weeks_held')
         .eq('league_id', activeLeagueId)
-        .eq('round', CURRENT_ROUND),
+        .eq('round', currentRound),
       supabase
         .from('player_pool')
         .select('player_key, full_name, team, position')
@@ -137,7 +157,7 @@ export default function LeagueOverviewPage() {
       supabase
         .from('player_scores')
         .select('player_key, points, stats')
-        .eq('round', CURRENT_ROUND),
+        .eq('round', currentRound),
       supabase
         .from('league_members')
         .select('user_id, team_name')
@@ -268,7 +288,7 @@ export default function LeagueOverviewPage() {
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
               <div className="text-white font-semibold">Join Code: {league.join_code || 'N/A'}</div>
-              <div className="text-slate-400 text-sm">Round: {CURRENT_ROUND}</div>
+              <div className="text-slate-400 text-sm">Round: {ROUND_NAMES[currentRound] || currentRound}</div>
             </div>
             <div className="text-slate-400 text-sm">Total Rosters: {rosters.length}</div>
           </div>
