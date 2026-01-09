@@ -131,9 +131,12 @@ export default function AdminRostersPage() {
       .eq('user_id', user.id)
       .in('role', ['owner', 'admin']);
 
-    const leagues = (data || [])
+    type LeagueJoinRow = { leagues: LeagueOption | null };
+    const rows = (data as LeagueJoinRow[] | null) ?? [];
+    const leagues = rows
       .map(row => row.leagues)
-      .filter(Boolean) as LeagueOption[];
+      .filter((league): league is LeagueOption => Boolean(league && league.id && league.name));
+
     setAdminLeagues(leagues);
 
     if (typeof window === 'undefined') return;
