@@ -318,9 +318,27 @@ export default function RosterPage() {
     setWeeksHeld({ ...weeksHeld, [slotKey]: 1 });
   };
 
+  // Check if player is on bye this week (no projection for current round)
+  const isPlayerOnBye = (playerKey: string) => {
+    if (!playerKey) return false;
+    const player = players.find(p => p.player_key === playerKey);
+    if (!player) return false;
+    const matchup = WILD_CARD_MATCHUPS[player.team];
+    return matchup?.isBye || false;
+  };
+
+  // Get effective projection (0 for bye week players in current round)
+  const getEffectiveProjection = (playerKey: string) => {
+    if (!playerKey) return 0;
+    if (currentRound === 'WC' && isPlayerOnBye(playerKey)) {
+      return 0; // Bye week players score 0 in Wild Card
+    }
+    return PROJECTED_POINTS[playerKey] || 0;
+  };
+
   const getTotalProjectedPoints = () => {
     return Object.entries(roster).reduce((total, [slotKey, playerKey]) => {
-      const basePoints = PROJECTED_POINTS[playerKey] || 0;
+      const basePoints = getEffectiveProjection(playerKey);
       const multiplier = weeksHeld[slotKey] || 1;
       return total + (basePoints * multiplier);
     }, 0);
@@ -412,7 +430,8 @@ export default function RosterPage() {
             {ROSTER_SLOTS.map((slot) => {
               const selectedPlayer = roster[slot.key] ? getSelectedPlayer(roster[slot.key]) : null;
               const matchup = selectedPlayer ? WILD_CARD_MATCHUPS[selectedPlayer.team] : null;
-              const projected = roster[slot.key] ? PROJECTED_POINTS[roster[slot.key]] : null;
+              const isBye = selectedPlayer ? (matchup?.isBye || false) : false;
+              const projected = roster[slot.key] ? getEffectiveProjection(roster[slot.key]) : null;
               const teamColors = selectedPlayer ? TEAM_COLORS[selectedPlayer.team] : null;
               const multiplier = weeksHeld[slot.key] || 1;
 
@@ -494,13 +513,19 @@ export default function RosterPage() {
                       {/* Projected Points with Multiplier */}
                       {projected !== null && (
                         <div className="mt-1 text-center">
-                          <span className="inline-block px-2 py-0.5 bg-black/30 rounded text-emerald-300 text-xs font-bold">
-                            {multiplier > 1 ? (
-                              <>{projected.toFixed(1)} × {multiplier} = {(projected * multiplier).toFixed(1)}</>
-                            ) : (
-                              <>{(projected * multiplier).toFixed(1)} pts</>
-                            )}
-                          </span>
+                          {isBye ? (
+                            <span className="inline-block px-2 py-0.5 bg-yellow-500/30 rounded text-yellow-300 text-xs font-bold">
+                              0 pts (Bye)
+                            </span>
+                          ) : (
+                            <span className="inline-block px-2 py-0.5 bg-black/30 rounded text-emerald-300 text-xs font-bold">
+                              {multiplier > 1 ? (
+                                <>{projected.toFixed(1)} × {multiplier} = {(projected * multiplier).toFixed(1)}</>
+                              ) : (
+                                <>{(projected * multiplier).toFixed(1)} pts</>
+                              )}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -573,7 +598,8 @@ export default function RosterPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                       {tierPlayers.map(player => {
                         const matchup = WILD_CARD_MATCHUPS[player.team];
-                        const projected = PROJECTED_POINTS[player.player_key];
+                        const playerIsBye = matchup?.isBye || false;
+                        const projected = getEffectiveProjection(player.player_key);
                         const isSelected = isPlayerSelected(player.player_key);
                         const teamColors = TEAM_COLORS[player.team];
 
@@ -627,13 +653,17 @@ export default function RosterPage() {
                                 </div>
                               )}
                               {/* Projected Points */}
-                              {projected !== undefined && (
-                                <div className="mt-2 text-center">
+                              <div className="mt-2 text-center">
+                                {playerIsBye ? (
+                                  <span className="inline-block px-2 py-1 bg-yellow-500/30 rounded-full text-yellow-300 text-xs font-bold">
+                                    0 pts (Bye)
+                                  </span>
+                                ) : (
                                   <span className="inline-block px-2 py-1 bg-black/30 rounded-full text-emerald-300 text-xs font-bold">
                                     {projected.toFixed(1)} proj
                                   </span>
-                                </div>
-                              )}
+                                )}
+                              </div>
                               {/* Selected Badge */}
                               {isSelected && (
                                 <div className="mt-2 text-center">
