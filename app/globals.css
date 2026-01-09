@@ -12,15 +12,52 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Login page form styles - white background */
+.bg-white input[type="text"],
+.bg-white input[type="email"],
+.bg-white input[type="password"] {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+}
+
+/* Dark theme form styles */
+.bg-slate-900 input[type="text"],
+.bg-slate-900 input[type="email"],
+.bg-slate-900 input[type="password"],
+.bg-slate-900 select,
+.bg-slate-800 input[type="text"],
+.bg-slate-800 input[type="email"],
+.bg-slate-800 input[type="password"],
+.bg-slate-800 select {
+  color: #ffffff !important;
+  background-color: #0f172a !important;
+}
+
+input::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Better focus states */
+input:focus,
+select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+}
+
+/* Ensure minimum touch target size on mobile */
+input, select, button {
+  min-height: 44px;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }

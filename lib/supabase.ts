@@ -17,7 +17,18 @@ export interface League {
   id: string;
   name: string;
   scoring_format: 'PPR' | 'HALF_PPR' | 'STANDARD';
+  join_code: string | null;
+  owner_user_id: string | null;
+  scoring_settings: Record<string, unknown> | null;
   created_at: string;
+}
+
+export interface LeagueMember {
+  id: string;
+  league_id: string;
+  user_id: string;
+  role: 'owner' | 'admin' | 'member';
+  joined_at: string;
 }
 
 export interface PlayerPool {
@@ -73,7 +84,7 @@ export interface PlayerScore {
   espn_game_id: string | null;
   round: 'WC' | 'DIV' | 'CONF' | 'SB';
   points: number;
-  stats: any;
+  stats: Record<string, unknown> | null;
   last_synced_at: string;
   created_at: string;
 }

@@ -17,11 +17,18 @@
 
 1. In your Supabase dashboard, click "SQL Editor" in left sidebar
 2. Click "New query"
-3. Copy entire contents of `supabase/migrations/001_initial.sql`
-4. Paste and click "Run"
-5. You should see "Success. No rows returned"
-6. Repeat for `supabase/migrations/002_seed_players.sql`
-7. Verify in Table Editor - you should see 340+ rows in `player_pool`
+3. Run each migration file in order:
+   - `001_initial.sql` - Core tables (profiles, player_pool, rosters, etc.)
+   - `002_seed_players.sql` - Seeds 340+ playoff players
+   - `003_leagues.sql` - League system tables
+   - `004_league_admin.sql` - Admin roles and permissions
+   - `005_league_member_policies.sql` - RLS policies for members
+   - `006_league_insert_policy.sql` - Join league policies
+   - `007_team_names.sql` - Team name column for fantasy team names
+   - `008_fix_league_member_policy.sql` - Fix recursive policy
+   - `009_league_delete_policy.sql` - Allow owners to delete leagues
+   - `010_scoring_settings.sql` - Customizable scoring per league
+4. Verify in Table Editor - you should see 340+ rows in `player_pool`
 
 ## Step 3: Get Supabase Credentials
 
@@ -124,20 +131,35 @@ VALUES
 ## Step 9: Share with League
 
 1. Get your Vercel URL (e.g., `playoff-challenge.vercel.app`)
-2. Send to league members
-3. Instructions for users:
-   - Go to URL
-   - Sign up with email + password + name
-   - Pick 8 players before first kickoff
-   - Check leaderboard during games!
+2. **Create your league first:**
+   - Sign up at your URL
+   - Go to `/league`
+   - Click "Create League" with your league name
+   - Note the 6-character join code (e.g., "ABC123")
+3. **Send to league members:**
+   - Share URL and join code
+   - Instructions for users:
+     - Go to URL
+     - Sign up with email + password + display name
+     - Go to "League" page
+     - Enter join code + team name (their fantasy team name)
+     - Go to "Roster" to pick 8 players
+     - Check leaderboard during games!
 
 ## Step 10: Monitor During Games
 
-### As Admin:
+### As League Admin:
+1. Go to `/league` - you'll see "League Settings" section
+2. Customize scoring (field goals, extra points) if needed
+3. Download backup CSV anytime from `/admin`
+4. Advance round when playoffs progress (copies rosters with +1 multiplier)
+
+### As Site Admin:
 1. Go to `/admin`
 2. Enter admin password
 3. Click "Sync Now" to manually refresh scores
 4. Check Vercel logs for cron job runs
+5. Download backup CSV for disaster recovery
 
 ### Auto-Sync:
 - Cron job runs every 5 minutes

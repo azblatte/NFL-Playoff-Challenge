@@ -2,6 +2,37 @@
 
 export type ScoringFormat = 'PPR' | 'HALF_PPR' | 'STANDARD';
 
+export type ScoringSettings = {
+  passing: {
+    yards_per_point: number;
+    touchdown: number;
+    interception: number;
+  };
+  rushing: {
+    yards_per_point: number;
+    touchdown: number;
+  };
+  receiving: {
+    yards_per_point: number;
+    touchdown: number;
+    reception: number;
+  };
+  fumbles: {
+    lost: number;
+  };
+  kicking: {
+    field_goal: number;
+    extra_point: number;
+  };
+  defense: {
+    touchdown: number;
+    sack: number;
+    interception: number;
+    fumble_recovery: number;
+    safety: number;
+  };
+};
+
 export interface PlayerStats {
   // Passing
   passingYards?: number;
@@ -38,118 +69,147 @@ export interface PlayerStats {
   safeties?: number;
 }
 
-// PPR scoring rules
-const PPR_SCORING = {
+const DEFAULT_POINTS_ALLOWED = (points: number) => {
+  if (points === 0) return 10;
+  if (points <= 6) return 7;
+  if (points <= 13) return 4;
+  if (points <= 20) return 1;
+  if (points <= 27) return 0;
+  if (points <= 34) return -1;
+  return -4;
+};
+
+const BASE_SETTINGS: ScoringSettings = {
   passing: {
-    yards: 1 / 25,      // 0.04 pts per yard (1 pt per 25 yds)
-    touchdowns: 4,
-    interceptions: -2
+    yards_per_point: 25,
+    touchdown: 4,
+    interception: -2
   },
   rushing: {
-    yards: 1 / 10,      // 0.1 pts per yard (1 pt per 10 yds)
-    touchdowns: 6
+    yards_per_point: 10,
+    touchdown: 6
   },
   receiving: {
-    yards: 1 / 10,      // 0.1 pts per yard
-    touchdowns: 6,
-    receptions: 1       // PPR
+    yards_per_point: 10,
+    touchdown: 6,
+    reception: 1
   },
   fumbles: {
     lost: -2
   },
   kicking: {
-    fieldGoalsMade: 3,
-    extraPointsMade: 1
+    field_goal: 3,
+    extra_point: 1
   },
   defense: {
     touchdown: 6,
     sack: 1,
     interception: 2,
-    fumbleRecovery: 2,
-    safety: 2,
-    pointsAllowed: (points: number) => {
-      if (points === 0) return 10;
-      if (points <= 6) return 7;
-      if (points <= 13) return 4;
-      if (points <= 20) return 1;
-      if (points <= 27) return 0;
-      if (points <= 34) return -1;
-      return -4;
-    }
+    fumble_recovery: 2,
+    safety: 2
   }
 };
 
-export function calculateFantasyPoints(
+export function getDefaultScoringSettings(format: ScoringFormat = 'PPR'): ScoringSettings {
+  const reception = format === 'PPR' ? 1 : format === 'HALF_PPR' ? 0.5 : 0;
+  return {
+    ...BASE_SETTINGS,
+    receiving: {
+      ...BASE_SETTINGS.receiving,
+      reception
+    }
+  };
+}
+
+export function normalizeScoringSettings(
+  format: ScoringFormat,
+  settings?: Partial<ScoringSettings> | null
+): ScoringSettings {
+  const base = getDefaultScoringSettings(format);
+  if (!settings || typeof settings !== 'object') return base;
+  return {
+    passing: { ...base.passing, ...settings.passing },
+    rushing: { ...base.rushing, ...settings.rushing },
+    receiving: { ...base.receiving, ...settings.receiving },
+    fumbles: { ...base.fumbles, ...settings.fumbles },
+    kicking: { ...base.kicking, ...settings.kicking },
+    defense: { ...base.defense, ...settings.defense }
+  };
+}
+
+export function calculateFantasyPointsWithSettings(
   stats: PlayerStats,
-  format: ScoringFormat = 'PPR'
+  settings: ScoringSettings
 ): number {
   let points = 0;
 
-  // Passing
   if (stats.passingYards) {
-    points += stats.passingYards * PPR_SCORING.passing.yards;
+    points += stats.passingYards / settings.passing.yards_per_point;
   }
   if (stats.passingTouchdowns) {
-    points += stats.passingTouchdowns * PPR_SCORING.passing.touchdowns;
+    points += stats.passingTouchdowns * settings.passing.touchdown;
   }
   if (stats.interceptions) {
-    points += stats.interceptions * PPR_SCORING.passing.interceptions;
+    points += stats.interceptions * settings.passing.interception;
   }
 
-  // Rushing
   if (stats.rushingYards) {
-    points += stats.rushingYards * PPR_SCORING.rushing.yards;
+    points += stats.rushingYards / settings.rushing.yards_per_point;
   }
   if (stats.rushingTouchdowns) {
-    points += stats.rushingTouchdowns * PPR_SCORING.rushing.touchdowns;
+    points += stats.rushingTouchdowns * settings.rushing.touchdown;
   }
 
-  // Receiving
   if (stats.receivingYards) {
-    points += stats.receivingYards * PPR_SCORING.receiving.yards;
+    points += stats.receivingYards / settings.receiving.yards_per_point;
   }
   if (stats.receivingTouchdowns) {
-    points += stats.receivingTouchdowns * PPR_SCORING.receiving.touchdowns;
+    points += stats.receivingTouchdowns * settings.receiving.touchdown;
   }
   if (stats.receptions) {
-    const receptionPoints = format === 'PPR' ? 1 : format === 'HALF_PPR' ? 0.5 : 0;
-    points += stats.receptions * receptionPoints;
+    points += stats.receptions * settings.receiving.reception;
   }
 
-  // Fumbles
   if (stats.fumblesLost) {
-    points += stats.fumblesLost * PPR_SCORING.fumbles.lost;
+    points += stats.fumblesLost * settings.fumbles.lost;
   }
 
-  // Kicking
   if (stats.fieldGoalsMade) {
-    points += stats.fieldGoalsMade * PPR_SCORING.kicking.fieldGoalsMade;
+    points += stats.fieldGoalsMade * settings.kicking.field_goal;
   }
   if (stats.extraPointsMade) {
-    points += stats.extraPointsMade * PPR_SCORING.kicking.extraPointsMade;
+    points += stats.extraPointsMade * settings.kicking.extra_point;
   }
 
-  // Defense/ST
   if (stats.defensiveTouchdowns) {
-    points += stats.defensiveTouchdowns * PPR_SCORING.defense.touchdown;
+    points += stats.defensiveTouchdowns * settings.defense.touchdown;
   }
   if (stats.sacks) {
-    points += stats.sacks * PPR_SCORING.defense.sack;
+    points += stats.sacks * settings.defense.sack;
   }
   if (stats.interceptionsMade) {
-    points += stats.interceptionsMade * PPR_SCORING.defense.interception;
+    points += stats.interceptionsMade * settings.defense.interception;
   }
   if (stats.fumblesRecovered) {
-    points += stats.fumblesRecovered * PPR_SCORING.defense.fumbleRecovery;
+    points += stats.fumblesRecovered * settings.defense.fumble_recovery;
   }
   if (stats.safeties) {
-    points += stats.safeties * PPR_SCORING.defense.safety;
+    points += stats.safeties * settings.defense.safety;
   }
   if (stats.pointsAllowed !== undefined) {
-    points += PPR_SCORING.defense.pointsAllowed(stats.pointsAllowed);
+    points += DEFAULT_POINTS_ALLOWED(stats.pointsAllowed);
   }
 
-  return Math.round(points * 100) / 100; // Round to 2 decimals
+  return Math.round(points * 100) / 100;
+}
+
+export function calculateFantasyPoints(
+  stats: PlayerStats,
+  format: ScoringFormat = 'PPR',
+  settings?: Partial<ScoringSettings> | null
+): number {
+  const normalized = normalizeScoringSettings(format, settings);
+  return calculateFantasyPointsWithSettings(stats, normalized);
 }
 
 // Parse ESPN stats array into our PlayerStats format
