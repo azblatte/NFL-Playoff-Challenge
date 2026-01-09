@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
@@ -68,6 +68,7 @@ export default function RosterPage() {
   const [showTier4, setShowTier4] = useState(true);
   const [activeLeagueId, setActiveLeagueId] = useState(DEFAULT_LEAGUE_ID);
   const [currentRound, setCurrentRound] = useState('WC');
+  const playerPanelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -84,6 +85,16 @@ export default function RosterPage() {
       loadRoster();
     }
   }, [activeLeagueId, currentRound]);
+
+  useEffect(() => {
+    if (!activeSlot || typeof window === 'undefined') return;
+    if (window.innerWidth >= 768) return;
+    const panel = playerPanelRef.current;
+    if (!panel) return;
+    requestAnimationFrame(() => {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [activeSlot]);
 
   async function loadCurrentRound() {
     try {
@@ -251,6 +262,10 @@ export default function RosterPage() {
     setActiveSlot(null);
   };
 
+  const toggleSlot = (slotKey: string) => {
+    setActiveSlot(prev => (prev === slotKey ? null : slotKey));
+  };
+
   const clearSlot = (slotKey: string) => {
     setRoster({ ...roster, [slotKey]: '' });
     setWeeksHeld({ ...weeksHeld, [slotKey]: 1 });
@@ -317,8 +332,18 @@ export default function RosterPage() {
               return (
                 <div
                   key={slot.key}
-                  onClick={() => setActiveSlot(activeSlot === slot.key ? null : slot.key)}
-                  className={`relative rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${
+                  onClick={() => toggleSlot(slot.key)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleSlot(slot.key);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={activeSlot === slot.key}
+                  aria-label={`Select ${slot.label}`}
+                  className={`relative rounded-xl overflow-hidden cursor-pointer transition-all duration-200 touch-manipulation ${
                     activeSlot === slot.key
                       ? 'ring-2 ring-blue-500 scale-105'
                       : 'hover:scale-102 hover:shadow-lg'
@@ -406,7 +431,7 @@ export default function RosterPage() {
 
         {/* Player Selection Panel */}
         {activeSlot && (
-          <div className="mb-8 bg-slate-800 rounded-xl p-4 border border-slate-700">
+          <div ref={playerPanelRef} className="mb-8 bg-slate-800 rounded-xl p-4 border border-slate-700">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white">
                 Select {ROSTER_SLOTS.find(s => s.key === activeSlot)?.label}
